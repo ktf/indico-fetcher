@@ -40,53 +40,47 @@ struct IndicoFetcher: ParsableCommand {
         let task = URLSession.shared.dataTask(with: sessUrl) { data, response, error in
           if error != nil || data == nil {
               print("Client error!")
+              sema.signal()
               return
           }
 
           guard let response = response as? HTTPURLResponse, (200...299).contains(response.statusCode) else {
               print("Server error!")
+              sema.signal()
               return
           }
 
           guard let mime = response.mimeType, mime == "application/json" else {
               print("Wrong MIME type!")
+              sema.signal()
               return
           }
-
-          //do {
-          //    let json = try JSONSerialization.jsonObject(with: data!, options: [])
-          //    print(json)
-          //} catch {
-          //    print("JSON error: \(error.localizedDescription)")
-          //}        
 
           do {
               guard let jsonObject = try JSONSerialization.jsonObject(with: data!) as? [String: Any] else {
                   print("Error: Cannot convert data to JSON object")
+                  sema.signal()
                   return
               }
               guard let prettyJsonData = try? JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted) else {
                   print("Error: Cannot convert JSON object to Pretty JSON data")
+                  sema.signal()
                   return
               }
               guard let prettyPrintedJson = String(data: prettyJsonData, encoding: .utf8) else {
                   print("Error: Couldn't print JSON in String")
+                  sema.signal()
                   return
               }
               
               print(prettyPrintedJson)
           } catch {
               print("Error: Trying to convert JSON data to string")
+              sema.signal()
               return
           }
 
-
-          //print(data)
-          //print(response)
-          //print(error)
-          // Do something...
           sema.signal()
-
         }
         task.resume()
         sema.wait()
